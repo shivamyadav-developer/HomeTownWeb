@@ -5,6 +5,7 @@ import { ClipboardCheck, CircleUser, CloudDownload, Crown, Download, Fingerprint
 import { useAuth } from '../context/AuthContext.jsx';
 import { useLeads } from '../context/LeadsContext.jsx';
 import { useInstallPrompt, useOnline } from '../hooks/useApi.js';
+import CallOutcomeModal from './CallOutcomeModal.jsx';
 
 export const NAV = [
   { to: '/target', label: 'Target', icon: Target },
@@ -123,6 +124,9 @@ export default function Layout() {
           </NavLink>
         ))}
       </nav>
+
+      {/* "Call Conversation" popup after calling a customer (same as the app) */}
+      <CallOutcomeModal />
 
       {/* Force update, like the mobile app: a new version blocks the app until updated.
           Drafts (checklists, queued leads) are kept in local storage, so nothing is lost. */}

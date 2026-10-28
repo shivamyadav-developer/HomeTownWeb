@@ -24,6 +24,39 @@ const writeQueue = (q) => {
   }
 };
 
+/* ---- Call in progress (sessionStorage: survives a tab reload, not a new session) ---- */
+const PENDING_CALL_KEY = 'ontrack.pendingCall';
+const readPendingCall = () => {
+  try {
+    return JSON.parse(sessionStorage.getItem(PENDING_CALL_KEY) || 'null');
+  } catch {
+    return null;
+  }
+};
+const writePendingCall = (call) => {
+  try {
+    if (call) sessionStorage.setItem(PENDING_CALL_KEY, JSON.stringify(call));
+    else sessionStorage.removeItem(PENDING_CALL_KEY);
+  } catch {
+    /* ignore */
+  }
+};
+
+// Same format as the app: "45s", "2m 10s"
+export const fmtCallDuration = (seconds) => {
+  if (seconds == null) return '-';
+  const m = Math.floor(seconds / 60);
+  return m > 0 ? `${m}m ${seconds % 60}s` : `${seconds % 60}s`;
+};
+
+// Default outcome after a call (same as the app): converted stays converted,
+// NEW becomes CONTACTED, anything else keeps its current status
+export const statusAfterCall = (lead) => {
+  if (lead?.isConverted) return 'CONVERTED';
+  const s = String(lead?.crmStatus || '').toUpperCase();
+  return s && s !== 'NEW' ? s : 'CONTACTED';
+};
+
 export function LeadsProvider({ children }) {
   const { user } = useAuth();
   const storeId = user?.storeId;
@@ -143,9 +176,98 @@ export function LeadsProvider({ children }) {
     return () => window.removeEventListener('online', run);
   }, [user, syncQueue]);
 
+  /* ---- Calling a customer (same flow as the app) ----
+     Call → the phone dialer opens → when the user comes back to this page,
+     the "Call Conversation" popup asks for the outcome and notes. The pending
+     call is kept in sessionStorage so it survives the browser reloading the tab. */
+  const [pendingCall, setPendingCall] = useState(() => readPendingCall());
+  const [finishedCall, setFinishedCall] = useState(null); // shown in the popup
+
+  const startCall = useCallback(
+    (lead) => {
+      if (!lead?.mobile) return;
+      const call = {
+        lead: { _id: lead._id, crmStatus: lead.crmStatus, isConverted: lead.isConverted },
+        customerName: lead.customerName && !String(lead.customerName).includes('*') ? lead.customerName : '',
+        mobile: lead.mobile,
+        calledBy: user?.name ?? '',
+        startedAt: Date.now(),
+      };
+      writePendingCall(call);
+      setPendingCall(call);
+      // Must happen inside the click handler, or the browser blocks it
+      window.location.href = `tel:${lead.mobile}`;
+    },
+    [user?.name],
+  );
+
+  // Show the popup when the user returns from the dialer
+  useEffect(() => {
+    if (!pendingCall) return undefined;
+    let wentAway = document.visibilityState === 'hidden';
+    const finish = () => {
+      const call = readPendingCall();
+      if (!call) return;
+      writePendingCall(null);
+      setPendingCall(null);
+      setFinishedCall({ ...call, durationSeconds: Math.max(0, Math.round((Date.now() - call.startedAt) / 1000)) });
+    };
+    const onVisible = () => {
+      if (document.visibilityState === 'hidden') wentAway = true;
+      else if (wentAway) finish();
+    };
+    const onFocus = () => wentAway && finish();
+    const onBlur = () => {
+      wentAway = true;
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onFocus);
+    window.addEventListener('blur', onBlur);
+    // Computers without a phone app never leave the page — ask after a moment anyway
+    const fallback = setTimeout(() => !wentAway && finish(), 4000);
+    // The page was reloaded after the call: ask straight away
+    if (Date.now() - pendingCall.startedAt > 5000 && document.visibilityState === 'visible') finish();
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onFocus);
+      window.removeEventListener('blur', onBlur);
+      clearTimeout(fallback);
+    };
+  }, [pendingCall]);
+
+  /** Save (with status + notes) or Skip (status only) — both record the call on the server. */
+  const finishCall = useCallback(
+    async (crmStatus, notes = '') => {
+      const call = finishedCall;
+      setFinishedCall(null);
+      if (!call?.lead?._id) return;
+      const duration = fmtCallDuration(call.durationSeconds);
+      const by = call.calledBy ? ` — ${call.calledBy}` : '';
+      const comment = notes.trim()
+        ? `${notes.trim()} (call ${duration}${by})`
+        : `Called customer from app (call ${duration}${by})`;
+      await updateLead(call.lead._id, { mobileCall: { called: true }, crmStatus, comment });
+    },
+    [finishedCall, updateLead],
+  );
+
   const value = useMemo(
-    () => ({ leads, meta, ...state, hasMore, loadMore, reload: () => load(1), updateLead, createLead, queued, syncQueue }),
-    [leads, meta, state, hasMore, loadMore, load, updateLead, createLead, queued, syncQueue],
+    () => ({
+      leads,
+      meta,
+      ...state,
+      hasMore,
+      loadMore,
+      reload: () => load(1),
+      updateLead,
+      createLead,
+      queued,
+      syncQueue,
+      startCall,
+      finishedCall,
+      finishCall,
+    }),
+    [leads, meta, state, hasMore, loadMore, load, updateLead, createLead, queued, syncQueue, startCall, finishedCall, finishCall],
   );
   return <LeadsContext.Provider value={value}>{children}</LeadsContext.Provider>;
 }

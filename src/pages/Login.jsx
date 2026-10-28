@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ArrowRight, Contact, Download, Eye, EyeOff, Lock, MapPin, ShieldCheck, Sparkles } from 'lucide-react';
+import { Contact, Download, Eye, EyeOff, Lock, MapPin, ShieldCheck, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext.jsx';
 import { useInstallPrompt } from '../hooks/useApi.js';
 
@@ -30,50 +30,45 @@ export default function Login() {
     }
   }
 
+  // Same layout and sizes as the mobile app's login screen (HTAttendanceApp/app/index.jsx)
   return (
-    <main className="login">
-      <div className="login-brand">
-        <div className="login-logo">
-          <img src="/logo.png" alt="HomeTown" />
-        </div>
-        <h1 className="login-title">
+    <main className="plogin">
+      <div className="plogin-brand">
+        <h1 className="plogin-title">
           Home<span>Town</span> <em>OnTrack</em>
         </h1>
-        <p className="login-chip">
-          <Sparkles size={16} /> Smart Retail Workforce Platform
+        <p className="plogin-tag">
+          <Sparkles size={13} /> Smart Retail Workforce Platform
         </p>
       </div>
 
-      <form className="login-card" onSubmit={onSubmit} noValidate>
-        <div className="login-card-head">
-          <div>
-            <p className="eyebrow eyebrow--orange">TEAM PORTAL</p>
-            <h2>Staff Login</h2>
-            <p className="muted">Enter your employee number and password</p>
-          </div>
-          <span className="badge-icon">
-            <Contact size={26} />
-          </span>
-        </div>
+      <form className="plogin-card" onSubmit={onSubmit} noValidate>
+        <span className="plogin-badge" aria-hidden="true">
+          <Contact size={24} />
+        </span>
+        <p className="plogin-portal">TEAM PORTAL</p>
+        <h2 className="plogin-heading">Staff Login</h2>
+        <p className="plogin-sub">{busy ? 'Verifying your credentials…' : 'Enter your employee number and password'}</p>
 
-        <label htmlFor="emp" className="label">Employee Number</label>
-        <div className="field">
-          <Contact size={22} className="field-icon" />
+        <label htmlFor="emp" className="plogin-label">Employee Number</label>
+        <div className="plogin-field">
+          <Contact size={20} />
           <input
             id="emp"
             name="username"
-            inputMode="numeric"
             autoComplete="username"
-            autoCapitalize="none"
+            autoCapitalize="characters"
+            autoCorrect="off"
             placeholder="Enter Username"
             value={username}
             onChange={(e) => setUsername(e.target.value)}
+            disabled={busy}
           />
         </div>
 
-        <label htmlFor="pw" className="label">Password</label>
-        <div className="field">
-          <Lock size={22} className="field-icon" />
+        <label htmlFor="pw" className="plogin-label">Password</label>
+        <div className="plogin-field">
+          <Lock size={20} />
           <input
             id="pw"
             name="password"
@@ -82,42 +77,43 @@ export default function Login() {
             placeholder="Enter Password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
+            disabled={busy}
           />
-          <button type="button" className="field-toggle" aria-label={show ? 'Hide password' : 'Show password'} onClick={() => setShow((s) => !s)}>
-            {show ? <Eye size={24} /> : <EyeOff size={24} />}
+          <button type="button" className="plogin-eye" aria-label={show ? 'Hide password' : 'Show password'} onClick={() => setShow((v) => !v)}>
+            {show ? <Eye size={20} /> : <EyeOff size={20} />}
           </button>
         </div>
 
-        <div className="note note--orange">
-          <MapPin size={18} /> Location permissions required for attendance tracking
+        <div className="plogin-note">
+          <MapPin size={14} /> Location permissions required for attendance tracking
         </div>
         {error && (
-          <p className="form-error" role="alert">
+          <p className="plogin-error" role="alert">
             {error}
           </p>
         )}
 
-        <button type="submit" className="btn btn--primary btn--block btn--lg" disabled={busy}>
-          {busy ? 'Signing in…' : (<>Open Staff Dashboard <ArrowRight size={22} /></>)}
+        <button type="submit" className="plogin-btn" disabled={busy}>
+          {busy ? <span className="spinner spinner--white" /> : 'Open Staff Dashboard →'}
         </button>
-        <p className="muted center small">Use your assigned HomeTown employee credentials.</p>
+        <p className="plogin-foot-text">Use your assigned HomeTown employee credentials.</p>
       </form>
 
-      <footer className="login-foot">
+      <footer className="plogin-bottom">
         <strong>
           Home<span>Town</span> OnTrack Workforce App
         </strong>
-        <a href="https://hometown.in" target="_blank" rel="noopener noreferrer">Visit hometown.in</a>
+        <a href="https://www.hometown.in/" target="_blank" rel="noopener noreferrer">Visit hometown.in</a>
         <p>
-          <ShieldCheck size={16} /> Secure Login · Terms of Service · Privacy Policy
+          <ShieldCheck size={12} /> Secure Login • Terms of Service • Privacy Policy
         </p>
         <q>Empowering every store team to learn, perform and grow.</q>
         {!installed && canInstall && (
-          <button type="button" className="btn btn--ghost" onClick={install}>
-            <Download size={18} /> Install app
+          <button type="button" className="plogin-install" onClick={install}>
+            <Download size={14} /> Install app
           </button>
         )}
-        {showIOSHint && <p className="small">To install: tap Share, then “Add to Home Screen”.</p>}
+        {showIOSHint && <p className="plogin-hint">To install: tap Share, then “Add to Home Screen”.</p>}
       </footer>
     </main>
   );

@@ -4,7 +4,6 @@ import { CalendarDays, Check, ChevronDown, IdCard, Mail, Package, Phone, Store, 
 import { useLeads } from '../context/LeadsContext.jsx';
 import { Card, EmptyState, Spinner, StatusPill, TopBar } from '../components/ui.jsx';
 import { fmtDateTime, LEAD_STATUS, LEAD_STATUS_ORDER, statusLabel } from '../utils/format.js';
-import { dialLead } from './Leads.jsx';
 
 function Row({ icon: Icon, label, value }) {
   return (
@@ -21,7 +20,7 @@ function Row({ icon: Icon, label, value }) {
 export default function LeadDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { leads, loading, hasMore, loadMore, updateLead } = useLeads();
+  const { leads, loading, hasMore, loadMore, updateLead, startCall } = useLeads();
   const [menu, setMenu] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -72,7 +71,7 @@ export default function LeadDetails() {
   return (
     <>
       <TopBar title="Lead Details" onBack={() => navigate('/leads')} />
-      <div className="page page--narrow page--cta">
+      <div className="page page--narrow page--cta lead-detail">
         <Card className="lead-hero">
           <span className="avatar avatar--lg">{name[0]?.toUpperCase()}</span>
           <h2>{name}</h2>
@@ -143,8 +142,8 @@ export default function LeadDetails() {
         )}
       </div>
 
-      <div className="sticky-cta">
-        <button type="button" className="btn btn--green btn--block btn--lg" onClick={() => dialLead(lead, updateLead)}>
+      <div className="sticky-cta lead-detail-cta">
+        <button type="button" className="btn btn--green btn--block btn--lg" onClick={() => startCall(lead)}>
           <Phone size={24} fill="currentColor" /> Call {lead.mobile}
         </button>
       </div>

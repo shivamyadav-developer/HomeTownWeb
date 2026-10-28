@@ -9,24 +9,10 @@ import { fmtDateTime, LEAD_STATUS, LEAD_STATUS_ORDER, statusLabel } from '../uti
 // Leads are shown 20 at a time; "Show more" reveals the next 20
 const STEP = 20;
 
-export const dialLead = async (lead, updateLead) => {
-  // Open the dialer right away (must happen in the click handler), then log the call.
-  window.location.href = `tel:${lead.mobile}`;
-  try {
-    await updateLead(lead._id, {
-      mobileCall: { called: true },
-      crmStatus: !lead.crmStatus || lead.crmStatus === 'NEW' ? 'CONTACTED' : lead.crmStatus,
-      comment: 'Called from OnTrack app',
-    });
-  } catch {
-    /* logging the call is best-effort */
-  }
-};
-
 export default function Leads() {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { leads, meta, loading, error, fromCache, hasMore, loadMore, reload, updateLead, queued } = useLeads();
+  const { leads, meta, loading, error, fromCache, hasMore, loadMore, reload, queued, startCall } = useLeads();
   const [q, setQ] = useState('');
   const [stage, setStage] = useState('ALL');
   const [visible, setVisible] = useState(STEP);
@@ -113,7 +99,7 @@ export default function Leads() {
                   aria-label={`Call ${name}`}
                   onClick={(e) => {
                     e.stopPropagation();
-                    dialLead(l, updateLead);
+                    startCall(l);
                   }}
                 >
                   <Phone size={18} fill="currentColor" />
